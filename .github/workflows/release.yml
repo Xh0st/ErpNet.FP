@@ -59,7 +59,7 @@ jobs:
           $out = & $iscc "/DMyAppVersion=${{ github.event.release.tag_name || inputs.tag }}" "/DPublishDir=..\out\win-x64" installer\ErpNet.FP-RO.iss 2>&1
           $out | Write-Output
           if ($LASTEXITCODE -ne 0) {
-            $out | Select-Object -Last 15 | ForEach-Object { Write-Output "::error::ISCC: $_" }
+            Write-Output ("::error::ISCC: " + (($out | Select-Object -Last 6) -join " | "))
             exit $LASTEXITCODE
           }
           Copy-Item dist\*.exe .
