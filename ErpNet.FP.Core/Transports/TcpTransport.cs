@@ -112,9 +112,9 @@
                 }
                 catch (AggregateException ex)
                 {
-                    var errorMessage = $"Cannot connect to {HostName}:{Port}: {ex.InnerException?.Message ?? ex.Message}";
-                    Log.Error(errorMessage);
-                    throw new TimeoutException(errorMessage, ex);
+                    var connectError = $"Cannot connect to {HostName}:{Port}: {ex.InnerException?.Message ?? ex.Message}";
+                    Log.Error(connectError);
+                    throw new TimeoutException(connectError, ex);
                 }
                 if (connected)
                 {
@@ -163,10 +163,10 @@
                 catch (AggregateException ex)
                 {
                     pendingRead = null;
-                    var message = $"Connection to {HostName}:{Port} failed while reading: {ex.InnerException?.Message ?? ex.Message}";
-                    Log.Error(message);
+                    var readError = $"Connection to {HostName}:{Port} failed while reading: {ex.InnerException?.Message ?? ex.Message}";
+                    Log.Error(readError);
                     CloseQuietly();
-                    throw new System.IO.IOException(message, ex);
+                    throw new System.IO.IOException(readError, ex);
                 }
                 if (completed)
                 {
@@ -174,10 +174,10 @@
                     if (task.Result == 0)
                     {
                         // The device closed the connection. The next Write reconnects.
-                        var message = $"Connection closed by {HostName}:{Port}";
-                        Log.Warning(message);
+                        var closedMessage = $"Connection closed by {HostName}:{Port}";
+                        Log.Warning(closedMessage);
                         CloseQuietly();
-                        throw new System.IO.IOException(message);
+                        throw new System.IO.IOException(closedMessage);
                     }
                     var result = new byte[task.Result];
                     Array.Copy(pendingBuffer, result, task.Result);
