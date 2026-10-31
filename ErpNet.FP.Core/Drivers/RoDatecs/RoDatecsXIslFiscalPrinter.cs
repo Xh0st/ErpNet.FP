@@ -68,6 +68,22 @@ namespace ErpNet.FP.Core.Drivers.RoDatecs
             };
         }
 
+        public override IDictionary<PaymentType, string> GetPaymentTypeMappings()
+        {
+            // Romanian MX payment list (DP-25MX manual, section 8 "Tipuri de plata"):
+            //   NUMERAR, CARD, CREDIT, TICHETE MASA, TICHETE VALORICE, VOUCHER, PLATI MODERNE, ...
+            // Protocol codes start at 0 (cash). Only cash and card are mapped by default:
+            // the Bulgarian codes for check/coupons would land on meal vouchers etc. Other
+            // payment types can be enabled per device through PaymentTypeMappings in appsettings.json.
+            var paymentTypeMappings = new Dictionary<PaymentType, string>
+            {
+                { PaymentType.Cash, "0" },
+                { PaymentType.Card, "1" },
+            };
+            ServiceOptions.RemapPaymentTypes(Info.SerialNumber, paymentTypeMappings);
+            return paymentTypeMappings;
+        }
+
         protected string? PrinterOption(string key)
         {
             return string.IsNullOrEmpty(Info.SerialNumber)

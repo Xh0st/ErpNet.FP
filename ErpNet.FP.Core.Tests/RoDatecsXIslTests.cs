@@ -276,6 +276,25 @@ namespace ErpNet.FP.Core.Tests
             Assert.False(printer.ValidateReceipt(SampleReceipt(usn: "bad usn with spaces")).Ok);
         }
 
+        [Fact]
+        public void Payments_OnlyCashAndCardByDefault_OthersViaConfig()
+        {
+            var printer = new FakeRoPrinter(Options());
+            var receipt = SampleReceipt(payments: new List<Payment>
+            {
+                new Payment { PaymentType = PaymentType.Coupons, Amount = 25m },
+            });
+            var status = printer.ValidateReceipt(receipt);
+            Assert.Contains(status.Messages, m => m.Code == "E406");
+
+            var options = Options();
+            options.PrintersProperties[FakeRoPrinter.Serial].PaymentTypeMappings["coupons"] = "3";
+            var configured = new FakeRoPrinter(options);
+            Assert.True(configured.ValidateReceipt(receipt).Ok);
+            configured.PrintReceipt(receipt);
+            Assert.Equal(new[] { "3\t25.00\t" }, configured.DataOf(0x35));
+        }
+
         [Theory]
         [InlineData("DP-25,263453 08Nov18 1047,F0C3,00000000,DA4600123456", "DP-25", "DA4600123456", "")]
         [InlineData("DP-25MX,1.00RO 01Jan24 1200,ABCD,00000000,DB4800000123,", "DP-25MX", "DB4800000123", "")]

@@ -58,10 +58,24 @@ Toate opțiunile sunt opționale:
 * `receiptAmountField` – coloana sumei din răspunsul comenzii 76, dacă firmware-ul tău o are în altă parte.
 * `usnJournal` – `false` dezactivează protecția la dublă tipărire.
 * `usnJournalPath` – unde se ține jurnalul (implicit `usn-journal\<serie>.json` lângă executabil).
-* `PaymentTypeMappings` – codurile de plată ale aparatului, dacă diferă de `cash=0, card=1, check=3, ext-coupons=4, coupons=5`.
+* `PaymentTypeMappings` – implicit sunt permise doar `cash` (0) și `card` (1). Pentru alte forme de plată
+  (ex. pe MX: 2 credit, 3 tichete masă, 4 tichete valorice, 5 voucher) adăugați maparea aici, ex. `"coupons": "3"`.
+  Fără mapare, un bon cu altă formă de plată e refuzat cu `E406` înainte să ajungă la aparat.
 
 Cu `AutoDetect: true`, driverul românesc este încercat după cel bulgăresc și refuză aparatele cu firmware bulgăresc.
 Pentru producție recomand totuși URI-uri explicite.
+
+## Pregătirea casei de marcat (DP-25MX, DP-150MX, WP-500MX, FP-700MX)
+
+Din manualul DP-25MX (Datecs România), meniul de programare, secțiunea „Conexiune cu PC”:
+
+1. **Port**: `1` COM1, `2` COM2, `3` USB, `5` LAN – alegeți portul pe care e legat calculatorul.
+2. **Viteză**: valoarea implicită din fabrică este `0` = 1200 bps. Setați `9` = 115200 bps (viteza implicită ErpNet.FP),
+   sau păstrați viteza aparatului și puneți-o în URI: `ro.dt.x.isl.com://COM3:9600`.
+3. Pentru LAN: setați IP fix (sau rezervare DHCP) și folosiți `ro.dt.x.isl.tcp://IP:3999`.
+4. Treceți casa în **modul 6 „Conexiune PC”** înainte de a porni serviciul. În alt mod casa nu răspunde la comenzi.
+5. Operatorul folosit de bridge este 1 cu parola `0001` (implicit din fabrică). Dacă ați schimbat parola,
+   trimiteți `operator` / `operatorPassword` în cerere. Raportul Z pe MX e permis doar operatorilor 26–30.
 
 ## Bon cu UM și USN
 
@@ -90,6 +104,18 @@ Nu se trimite la casa de marcat; este folosit doar pentru idempotență:
 * bon eșuat și anulat pe aparat → USN-ul se poate retrimite;
 * bon întrerupt (cădere de curent, conexiune pierdută în timpul tipăririi) → eroare `E409`, nu se retipărește automat.
   Verificați ultimul bon pe aparat și retrimiteți cu un USN nou doar dacă nu a ieșit.
+
+## Test pe aparat real
+
+`tools\test-ro.ps1` trimite 6 bonuri cu sume de 0.10–0.50 lei prin serviciul pornit local și verifică răspunsurile
+(bon simplu, card + cash + rest, comentarii + UM kg + discounturi, USN trimis de două ori, numerar în sertar,
+opțional raport X). **Pe un aparat fiscalizat sunt vânzări reale.**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\test-ro.ps1 -Printer casa1 -WithXReport
+```
+
+Scriptul scrie `test-ro-<data>.log` lângă el; dacă un pas pică, logul plus logul serviciului arată ce a răspuns casa.
 
 ## Ce trebuie verificat pe aparatul real
 
