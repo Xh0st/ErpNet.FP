@@ -33,8 +33,13 @@ jobs:
         run: |
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress | Out-Null }
-          & $iscc "/DMyAppVersion=0.0.0-ci.${{ github.run_number }}" "/DPublishDir=..\out\win-x64" installer\ErpNet.FP-RO.iss
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (-not (Test-Path $iscc)) { Write-Output "::error::ISCC.exe not found at $iscc"; exit 1 }
+          $out = & $iscc "/DMyAppVersion=0.0.0-ci.${{ github.run_number }}" "/DPublishDir=..\out\win-x64" installer\ErpNet.FP-RO.iss 2>&1
+          $out | Write-Output
+          if ($LASTEXITCODE -ne 0) {
+            $out | Select-Object -Last 15 | ForEach-Object { Write-Output "::error::ISCC: $_" }
+            exit $LASTEXITCODE
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: ErpNet.FP-RO-win-x64

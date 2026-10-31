@@ -1,4 +1,4 @@
-; Installer Windows (Inno Setup 6) pentru ErpNet.FP – ediția România.
+﻿; Installer Windows (Inno Setup 6) pentru ErpNet.FP – ediția România.
 ; Se compilează în GitHub Actions (release.yml):
 ;   ISCC.exe /DMyAppVersion=1.1.0-ro.1 /DPublishDir=..\out\win-x64 installer\ErpNet.FP-RO.iss
 ;
@@ -40,8 +40,8 @@ SetupIconFile=..\ErpNet.FP.Server\ErpNet.FP.ico
 UninstallDisplayIcon={app}\{#MyExe}
 Compression=lzma2/max
 SolidCompression=yes
-ArchitecturesAllowed=x64compatible
-ArchitecturesInstallIn64BitMode=x64compatible
+ArchitecturesAllowed=x64
+ArchitecturesInstallIn64BitMode=x64
 PrivilegesRequired=admin
 WizardStyle=modern
 CloseApplications=no
