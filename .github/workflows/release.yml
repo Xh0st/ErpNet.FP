@@ -1,0 +1,70 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - rid: win-x64
+            os: windows-latest
+          - rid: win-x86
+            os: windows-latest
+          - rid: linux-x64
+            os: ubuntu-latest
+          - rid: linux-arm
+            os: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Unit tests
+        if: matrix.rid == 'linux-x64'
+        run: dotnet test ErpNet.FP.Core.Tests/ErpNet.FP.Core.Tests.csproj -c Release
+      - name: Publish
+        run: dotnet publish ErpNet.FP.Server/ErpNet.FP.Server.csproj -c Release -r ${{ matrix.rid }} --self-contained true -o out/${{ matrix.rid }}
+      - name: Add docs and test script
+        shell: bash
+        run: |
+          cp README.md README-RO.md out/${{ matrix.rid }}/
+          mkdir -p out/${{ matrix.rid }}/tools
+          cp tools/test-ro.ps1 out/${{ matrix.rid }}/tools/
+      - name: Zip (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Compress-Archive -Path out/${{ matrix.rid }}/* -DestinationPath ErpNet.FP-RO-${{ github.ref_name }}-${{ matrix.rid }}.zip
+      - name: Zip (Linux)
+        if: runner.os == 'Linux'
+        run: cd out/${{ matrix.rid }} && zip -qr ../../ErpNet.FP-RO-${{ github.ref_name }}-${{ matrix.rid }}.zip .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zip-${{ matrix.rid }}
+          path: ErpNet.FP-RO-*.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" dist/*.zip \
+            --title "ErpNet.FP România ${{ github.ref_name }}" \
+            --notes-file .github/release-notes.md \
+            --prerelease \
+            --target "${{ github.sha }}"
