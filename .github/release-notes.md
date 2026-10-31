@@ -17,9 +17,12 @@ Prima versiune ErpNet.FP pentru casele de marcat din România.
 
 ## Instalare (Windows)
 
-1. Descărcați `ErpNet.FP-RO-<versiune>-win-x64.zip` și dezarhivați, de exemplu în `C:\ErpNet.FP`.
-2. Setați `appsettings.json` (exemplu în `README-RO.md`), de exemplu `"Uri": "ro.dt.x.isl.com://COM3"`.
-3. Treceți casa în modul 6 „Conexiune PC” și porniți `ErpNet.FP.Server.exe` (sau instalați-l ca serviciu Windows).
-4. Pagina de administrare: http://localhost:8001.
+1. Descărcați `ErpNet.FP-RO-<versiune>-setup.exe` și rulați-l ca administrator.
+   Installer-ul copiază serverul în `C:\Program Files\ErpNet.FP`, instalează serviciul Windows „ErpNet.FP - Fiscal Print Server (RO)” cu pornire automată și deschide pagina de administrare (http://localhost:8001).
+   Opțional, deschide portul 8001 în Windows Firewall, dacă aplicația rulează pe alt calculator.
+2. Setați `appsettings.json` din `C:\Program Files\ErpNet.FP` (exemplu în `README-RO.md`), de exemplu `"Uri": "ro.dt.x.isl.com://COM3"`, apoi reporniți serviciul.
+3. Treceți casa în modul 6 „Conexiune PC”.
 
-Nu este nevoie de .NET instalat. Sunt incluse și build-uri pentru Windows 32 bit, Linux x64 și Linux ARM.
+La actualizare rulați noul `setup.exe` peste cel vechi: `appsettings.json`, jurnalul USN și logurile se păstrează. La dezinstalare serviciul este șters, dar configurația și jurnalul rămân pe disc.
+
+Fără installer: zip-urile conțin aceleași fișiere, pentru Windows 64/32 bit, Linux x64 și Linux ARM. Nu este nevoie de .NET instalat.
