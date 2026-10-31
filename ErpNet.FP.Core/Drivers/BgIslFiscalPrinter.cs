@@ -96,6 +96,42 @@
             return status;
         }
 
+        /// <summary>
+        /// Returns the payments in the order the device can accept them.
+        /// <para>
+        /// Only cash may exceed the remaining sum (the device then prints the change).
+        /// Once a payment covers the total, the device closes the payment phase and rejects
+        /// further payments with "General error" / "Command is not permitted", leaving the
+        /// receipt open (see upstream issue #97: card + cash + change on Datecs).
+        /// So non-cash payments go first, cash goes last. The relative order inside each
+        /// group is kept. The abstract Change payment and zero amounts are not sent.
+        /// </para>
+        /// </summary>
+        protected virtual IList<Payment> OrderPaymentsForDevice(IEnumerable<Payment> payments)
+        {
+            var nonCash = new List<Payment>();
+            var cash = new List<Payment>();
+            foreach (var payment in payments)
+            {
+                if (payment.PaymentType == PaymentType.Change || payment.Amount == 0m)
+                {
+                    // PaymentType.Change is abstract payment,
+                    // used only for computing the total sum of the payments.
+                    continue;
+                }
+                if (payment.PaymentType == PaymentType.Cash)
+                {
+                    cash.Add(payment);
+                }
+                else
+                {
+                    nonCash.Add(payment);
+                }
+            }
+            nonCash.AddRange(cash);
+            return nonCash;
+        }
+
         public virtual (ReceiptInfo, DeviceStatus) PrintReceiptBody(Receipt receipt)
         {
             var receiptInfo = new ReceiptInfo();
@@ -154,7 +190,10 @@
                 }
 
             // Receipt payments
-            if (receipt.Payments == null || receipt.Payments.Count == 0)
+            var devicePayments = receipt.Payments == null
+                ? new List<Payment>()
+                : OrderPaymentsForDevice(receipt.Payments);
+            if (devicePayments.Count == 0)
             {
                 (_, deviceStatus) = FullPayment();
                 if (!deviceStatus.Ok)
@@ -166,17 +205,9 @@
             else
             {
                 uint paymentNumber = 0;
-                foreach (var payment in receipt.Payments)
+                foreach (var payment in devicePayments)
                 {
                     paymentNumber++;
-
-                    if (payment.PaymentType == PaymentType.Change)
-                    {
-                        // PaymentType.Change is abstract payment, 
-                        // used only for computing the total sum of the payments.
-                        // So we will skip it.
-                        continue;
-                    }
 
                     try
                     {

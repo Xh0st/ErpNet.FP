@@ -145,5 +145,12 @@
         /// <seealso cref="ErpNet.FP.Core.PriceModifierType"/>
         [JsonConverter(typeof(StringEnumConverter))]
         public PriceModifierType PriceModifierType { get; set; } = PriceModifierType.None;
+
+        /// <summary>
+        /// Optional unit of measure printed next to the quantity (for example "buc.", "kg", "l").
+        /// Used by drivers whose fiscal regulation requires a unit on every sale line (Romania).
+        /// Ignored by drivers that do not support it.
+        /// </summary>
+        public string? Unit { get; set; }
     }
 }

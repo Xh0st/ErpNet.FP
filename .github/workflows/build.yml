@@ -1,0 +1,34 @@
+name: build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Build server
+        run: dotnet build ErpNet.FP.Server/ErpNet.FP.Server.csproj -c Release
+      - name: Unit tests
+        run: dotnet test ErpNet.FP.Core.Tests/ErpNet.FP.Core.Tests.csproj -c Release --logger "console;verbosity=normal"
+
+  publish-windows:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Publish win-x64 (self-contained)
+        run: dotnet publish ErpNet.FP.Server/ErpNet.FP.Server.csproj -c Release -r win-x64 --self-contained true -o out/win-x64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ErpNet.FP-RO-win-x64
+          path: out/win-x64

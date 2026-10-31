@@ -9,6 +9,7 @@
     using ErpNet.FP.Core.Drivers.BgIncotex;
     using ErpNet.FP.Core.Drivers.BgTremol;
     using ErpNet.FP.Core.Drivers.BgSis;
+    using ErpNet.FP.Core.Drivers.RoDatecs;
     using ErpNet.FP.Core.Provider;
     using ErpNet.FP.Core.Service;
     using ErpNet.FP.Core.Transports;
@@ -42,6 +43,7 @@
 
             // Drivers
             var datecsXIsl = new BgDatecsXIslFiscalPrinterDriver();
+            var roDatecsXIsl = new RoDatecsXIslFiscalPrinterDriver();
             var datecsPIsl = new BgDatecsPIslFiscalPrinterDriver();
             var datecsCIsl = new BgDatecsCIslFiscalPrinterDriver();
             var eltradeIsl = new BgEltradeIslFiscalPrinterDriver();
@@ -57,6 +59,10 @@
                 // Isl X Frame
                 .Register(datecsXIsl, comTransport)
                 .Register(datecsXIsl, tcpTransport)
+                // Isl X Frame, Romanian firmware. Registered after bg.dt.x.isl so autodetect
+                // keeps Bulgarian devices on their driver; RO driver rejects Bulgarian answers.
+                .Register(roDatecsXIsl, comTransport)
+                .Register(roDatecsXIsl, tcpTransport)
                 // Isl Frame
                 .Register(datecsCIsl, comTransport)
                 .Register(datecsCIsl, tcpTransport)
