@@ -10,6 +10,7 @@
     using ErpNet.FP.Core.Drivers.BgTremol;
     using ErpNet.FP.Core.Drivers.BgSis;
     using ErpNet.FP.Core.Drivers.RoDatecs;
+    using ErpNet.FP.Core.Drivers.RoTremol;
     using ErpNet.FP.Core.Provider;
     using ErpNet.FP.Core.Service;
     using ErpNet.FP.Core.Transports;
@@ -52,6 +53,7 @@
             var islIcp = new BgIslIcpFiscalPrinterDriver();
             var tremolZfp = new BgTremolZfpFiscalPrinterDriver();
             var tremolV2Zfp = new BgTremolZfpV2FiscalPrinterDriver();
+            var roTremolZfp = new RoTremolZfpFiscalPrinterDriver();
             var bgSisJson = new BgSisJsonFiscalPrinterDriver();
 
             // Add drivers and their compatible transports to the provider.
@@ -83,6 +85,9 @@
                 .Register(tremolZfp, tcpTransport)
                 .Register(tremolV2Zfp, comTransport)
                 .Register(tremolV2Zfp, tcpTransport)
+                // Zfp Frame, Romanian Tremol firmware (rejects Bulgarian Tremol answers)
+                .Register(roTremolZfp, comTransport)
+                .Register(roTremolZfp, tcpTransport)
                 // SIS Fiscal Module (JSON-RPC over HTTP)
                 .Register(bgSisJson, httpSisJsonTransport);
         }
