@@ -22,6 +22,20 @@ diferența se face doar din `appsettings.json`.
 | Transport TCP | Timeout de conectare 3 s (era 200 ms), timeout de citire 2 s (era infinit), adresa nu mai rămâne blocată până la restart după un timeout, reconectare când aparatul închide conexiunea | Upstream #191: DP-150 pe TCP nu termina handshake-ul |
 | Idempotență USN | Jurnal persistent pe disc: același `uniqueSaleNumber` nu se tipărește de două ori | Retry-ul clientului după timeout HTTP ar fi tipărit al doilea bon fiscal |
 
+## Tremol cu firmware românesc (`ro.zk.zfp`)
+
+Driver scris după protocolul oficial Tremol pentru România (ZFP SDK RO 2601151250). Testat pe frame-uri reale de la o Tremol S25 RO (`Ver 1.00,TRM25-RO`).
+
+* Casa trebuie să fie în **REG OPER** (MODE → REG OPER → parola operatorului → TOTAL); în alt mod nu răspunde deloc.
+* Nu porniți în paralel „Server Tremol / ZFPLabServer”: ține portul COM ocupat.
+* URI: `ro.zk.zfp.com://COM9` (USB apare ca „STMicroelectronics Virtual COM Port”) sau `ro.zk.zfp.tcp://IP:8000`.
+* Operator implicit `1`, parola `0000` (4 cifre).
+* Grupe TVA: `taxGroup` 1–5 = A–E, 6 = F (Alte taxe).
+* UM: câmpul `unit` al articolului, max. 3 caractere (implicit `buc`, configurabil cu `itemUnit`).
+* Plăți: `cash` = plata 0; `card` = plata al cărei nume conține „CARD” (citit din casă). Alte forme de plată prin `PaymentTypeMappings`.
+* Discount valoric pe subtotal (`discount-amount`) e acceptat de casă doar dacă toate articolele au aceeași grupă TVA.
+* Stornarea nu este implementată (`E413`).
+
 ## Configurare (`appsettings.json`)
 
 ```json

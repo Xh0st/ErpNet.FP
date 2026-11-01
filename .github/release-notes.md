@@ -2,6 +2,16 @@ Prima versiune ErpNet.FP pentru casele de marcat din România.
 
 **Pre-release:** formatul comenzilor vine dintr-un fix verificat pe un Datecs DP-25 românesc. Modelele MX și comentariile pe bon trebuie confirmate pe aparat cu `tools\test-ro.ps1` înainte de folosirea la clienți.
 
+## Noutăți în această versiune
+
+- **Driver nou `ro.zk.zfp` pentru Tremol cu firmware românesc** (S25 RO și celelalte modele „-RO”), scris după protocolul oficial Tremol RO (ZFP SDK 2601151250):
+  - detectare automată pe COM/USB (casa trebuie să fie în **REG OPER**);
+  - grupe TVA A–E și F (Alte taxe), unitate de măsură pe articol (implicit `buc`);
+  - plăți: numerar și card (numărul plății „CARD” e citit din casă), card înaintea cash-ului;
+  - comentarii, discount/adaos pe articol și pe subtotal, intrări/ieșiri numerar, rapoarte X/Z, duplicat;
+  - fără bonuri duble pe același `uniqueSaleNumber`;
+  - stornarea nu este implementată pentru Tremol (răspunde cu `E413`).
+
 ## Noutăți
 
 - **Driver nou `ro.dt.x.isl`** pentru Datecs cu firmware românesc (DP-25, DP-25MX, DP-150MX, WP-50MX, WP-500MX, FP-700MX, FMP-350MX), separat de driverele bulgărești:
