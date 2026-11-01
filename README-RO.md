@@ -29,7 +29,7 @@ Driver scris după protocolul oficial Tremol pentru România (ZFP SDK RO 2601151
 * Casa trebuie să fie în **REG OPER** (MODE → REG OPER → parola operatorului → TOTAL); în alt mod nu răspunde deloc.
 * Nu porniți în paralel „Server Tremol / ZFPLabServer”: ține portul COM ocupat.
 * URI: `ro.zk.zfp.com://COM9` (USB apare ca „STMicroelectronics Virtual COM Port”) sau `ro.zk.zfp.tcp://IP:8000`.
-* Operator implicit `1`, parola `0000` (4 cifre).
+* Operator implicit `1`, parola `0` (valoarea din fabrică). Parola se trimite completată cu spații până la 4 caractere (`0   `), cum o păstrează casa.
 * Grupe TVA: `taxGroup` 1–5 = A–E, 6 = F (Alte taxe).
 * UM: câmpul `unit` al articolului, max. 3 caractere (implicit `buc`, configurabil cu `itemUnit`).
 * Plăți: `cash` = plata 0; `card` = plata al cărei nume conține „CARD” (citit din casă). Alte forme de plată prin `PaymentTypeMappings`.

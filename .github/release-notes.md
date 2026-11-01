@@ -1,8 +1,13 @@
-Prima versiune ErpNet.FP pentru casele de marcat din România.
+ErpNet.FP pentru casele de marcat din România.
 
 **Pre-release:** formatul comenzilor vine dintr-un fix verificat pe un Datecs DP-25 românesc. Modelele MX și comentariile pe bon trebuie confirmate pe aparat cu `tools\test-ro.ps1` înainte de folosirea la clienți.
 
 ## Noutăți în această versiune
+
+- **Tremol RO (`ro.zk.zfp`): parola operatorului** se trimite pe 4 caractere, completată cu spații, cum o păstrează casa (`0` → `0   `). Parola implicită pentru Tremol RO este acum `0` (valoarea din fabrică). Cu v1.1.0-ro.3 casa refuza deschiderea bonului cu „Incorrect password”.
+- Confirmat pe Tremol S25 RO (`TRM25-RO`): deschidere bon, articol cu UM, grupa TVA A, subtotal, anulare.
+
+## Versiunea anterioară (v1.1.0-ro.3)
 
 - **Driver nou `ro.zk.zfp` pentru Tremol cu firmware românesc** (S25 RO și celelalte modele „-RO”), scris după protocolul oficial Tremol RO (ZFP SDK 2601151250):
   - detectare automată pe COM/USB (casa trebuie să fie în **REG OPER**);
