@@ -150,7 +150,7 @@ namespace ErpNet.FP.Core.Tests
             var (info, status) = p.PrintReceipt(Sample());
 
             Assert.True(status.Ok, string.Join("; ", status.Messages.Select(m => m.Code + " " + m.Text)));
-            Assert.Equal(new[] { "1;0000;0;0;2" }, p.DataOf(0x30));
+            Assert.Equal(new[] { "1;0   ;0;0;2" }, p.DataOf(0x30));
 
             var sales = p.DataOf(0x31);
             Assert.Equal(2, sales.Count);
@@ -257,7 +257,7 @@ namespace ErpNet.FP.Core.Tests
             Assert.Equal(125.50m, cash.Amount);
 
             p.PrintMoneyWithdraw(new TransferAmount { Amount = 10m });
-            Assert.Equal(new[] { "1;0000;0;-10.00" }, p.DataOf(0x3B));
+            Assert.Equal(new[] { "1;0   ;0;-10.00" }, p.DataOf(0x3B));
         }
 
         [Fact]

@@ -67,7 +67,7 @@ namespace ErpNet.FP.Core.Drivers.RoTremol
             return new Dictionary<string, string>
             {
                 ["Operator.ID"] = "1",
-                ["Operator.Password"] = "0000",
+                ["Operator.Password"] = "0",   // factory default on Tremol RO, padded to "0   "
             };
         }
 
@@ -377,10 +377,14 @@ namespace ErpNet.FP.Core.Drivers.RoTremol
         protected string OperatorId(string? operatorId) =>
             string.IsNullOrEmpty(operatorId) ? Options.ValueOrDefault("Operator.ID", "1") : operatorId!;
 
+        /// <summary>
+        /// OperPass is a fixed 4-character field: the device stores a shorter password padded with
+        /// spaces (operator 1 reads back as "0   "), and compares all 4 characters.
+        /// </summary>
         protected string OperatorPassword(string? operatorId, string? operatorPassword) =>
-            string.IsNullOrEmpty(operatorId) || string.IsNullOrEmpty(operatorPassword)
-                ? Options.ValueOrDefault("Operator.Password", "0000")
-                : operatorPassword!;
+            (string.IsNullOrEmpty(operatorId) || string.IsNullOrEmpty(operatorPassword)
+                ? Options.ValueOrDefault("Operator.Password", "0")
+                : operatorPassword!).WithMaxLength(4).PadRight(4);
 
         // ---------------------------------------------------------------------------------
         // Commands
