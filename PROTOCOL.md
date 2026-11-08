@@ -630,6 +630,15 @@ Not every device can encode every type; an unsupported type is rejected with cod
 The same as [Print Fiscal Receipt](#post-print-fiscal-receipt), plus:
 * **"invoiceNumber"** - the invoice number as actually printed: the caller-supplied value for external numbering, or the device-assigned value otherwise.
 
+### Romanian simplified invoice (bon fiscal cu CUI cumpărător)
+On the Romanian drivers (`ro.dt.x.isl`, `ro.zk.zfp`) this endpoint prints a **bon fiscal cu CUI cumpărător** - a simplified fiscal invoice under art. 319 alin. 12 Cod fiscal / OUG 28/1999 - with the same `items`, `payments` and `uniqueSaleNumber` as `/receipt`, plus the buyer `recipient`. Specifics:
+* **"identifierType"** must be `tax-number` or `legal-registration` (the buyer's **CUI/CIF**). `national-id` (CNP) and `foreigner-id` are rejected with **E412**.
+* **"identifier"** is the Romanian CUI, with or without the `RO` prefix; its control digit is validated (key 753217532). An invalid CUI is rejected with **E405**.
+* **"name"** and **"identifier"** are required (**E405** otherwise).
+* The number is **device-assigned** (`invoiceNumberAssignment: "device-assigned"`); sending `"number"` is rejected with **E412**.
+* The CUI is printed in the device's **fiscal buyer field**, not as free-text comment. A repeated `uniqueSaleNumber` is **not printed twice** (same idempotency and **E409** behaviour as `/receipt`).
+* **"supportsInvoice"** is reported per model/firmware; on a device that does not support the buyer-CUI field, the request returns **E413**.
+
 ## `POST` Print Credit Note
 Prints a native credit note - an extended fiscal reversal against an original invoice, carrying the same **recipient** (buyer) block as an invoice.
 

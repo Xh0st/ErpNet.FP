@@ -4,6 +4,8 @@ ErpNet.FP pentru casele de marcat din România.
 
 ## Noutăți în această versiune
 
+- **Bon fiscal cu CUI cumpărător (factură simplificată) — validare.** `POST /invoice` pe Datecs RO și Tremol RO acceptă blocul `recipient`: `name` și `identifier` obligatorii (`E405`), CUI validat cu cifra de control (cheia 753217532, cu sau fără `RO`), `identifierType` `tax-number`/`legal-registration` acceptate iar `national-id`/`foreigner-id` respinse cu `E412`, numărul atribuit de casă (`device-assigned`, `number` trimis → `E412`). Emiterea CUI-ului pe casă se activează per model după confirmarea din documentația oficială de protocol (vezi `Drivers/*/Docs`).
+
 - **Tremol RO (`ro.zk.zfp`): parola operatorului** se trimite pe 4 caractere, completată cu spații, cum o păstrează casa (`0` → `0   `). Parola implicită pentru Tremol RO este acum `0` (valoarea din fabrică). Cu v1.1.0-ro.3 casa refuza deschiderea bonului cu „Incorrect password”.
 - Confirmat pe Tremol S25 RO (`TRM25-RO`): deschidere bon, articol cu UM, grupa TVA A, subtotal, anulare.
 

@@ -135,6 +135,22 @@ namespace ErpNet.FP.Core.Drivers.RoDatecs
             return status;
         }
 
+        /// <summary>
+        /// Validates a Romanian native invoice (bon fiscal cu CUI cumpărător): the receipt part
+        /// as usual, then the buyer block and the Romanian CUI (country-level rules).
+        /// The device command that carries the CUI is implemented in PrintInvoice.
+        /// </summary>
+        public override DeviceStatus ValidateInvoice(Invoice invoice)
+        {
+            var status = ValidateReceipt(invoice);
+            if (!status.Ok)
+            {
+                return status;
+            }
+            RomanianInvoice.ValidateRecipient(status, invoice, Info.InvoiceNumberAssignment);
+            return status;
+        }
+
         // ---------------------------------------------------------------------------------
         // Receipt flow
         // ---------------------------------------------------------------------------------

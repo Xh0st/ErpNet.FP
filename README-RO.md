@@ -144,3 +144,48 @@ Formatul comenzilor 48/49/53/76/90 vine dintr-un fix verificat pe un DP-25 româ
 
 Logurile serviciului conțin fiecare cadru trimis (`<<<`) și primit (`>>>`); dacă o comandă e refuzată,
 cadrul din log arată exact ce a răspuns aparatul.
+
+## Bon fiscal cu CUI cumpărător (factură simplificată)
+
+Endpointul `POST /printers/{id}/invoice` tipărește un **bon fiscal cu CUI-ul cumpărătorului**
+(factură simplificată, art. 319 alin. 12 Cod fiscal / OUG 28/1999) pe Datecs RO (`ro.dt.x.isl`)
+și Tremol RO (`ro.zk.zfp`). Payload-ul e identic cu cel de la `/receipt` (aceleași `items`,
+`payments`, `uniqueSaleNumber`), plus blocul `recipient`:
+
+```json
+{
+  "uniqueSaleNumber": "pa-000123",
+  "items": [
+    { "text": "Manopera", "quantity": 1, "unit": "buc", "unitPrice": 750.25, "taxGroup": 1 },
+    { "text": "Kit distributie", "quantity": 1, "unit": "buc", "unitPrice": 628.69, "taxGroup": 1 }
+  ],
+  "payments": [ { "amount": 1378.94, "paymentType": "card" } ],
+  "recipient": {
+    "name": "TRANSPORT LOGISTIC SRL",
+    "identifier": "14399840",
+    "identifierType": "tax-number",
+    "vatNumber": "RO14399840",
+    "address": "Splaiul Unirii 165, Bucuresti",
+    "city": "Bucuresti"
+  }
+}
+```
+
+Reguli (validate de bridge înainte de a trimite la casă):
+
+* `name` și `identifier` sunt obligatorii, altfel `E405`.
+* `identifier` = CUI-ul cumpărătorului, cu sau fără prefixul `RO`; se verifică cifra de control
+  (cheia 753217532). CUI invalid → `E405`.
+* `identifierType` acceptă `tax-number` sau `legal-registration`. `national-id` (CNP) și
+  `foreigner-id` se resping cu `E412`.
+* Numărul facturii îl dă casa (`invoiceNumberAssignment: "device-assigned"`); dacă trimiți `number`,
+  răspunsul e `E412`.
+* CUI-ul se tipărește în câmpul fiscal al casei, nu ca text liber. Același `uniqueSaleNumber` nu se
+  tipărește de două ori (aceeași idempotență și `E409` ca la `/receipt`).
+* Răspunsul e identic cu cel de la `/receipt` (`receiptNumber`, `receiptDateTime`, `receiptAmount`,
+  `fiscalMemorySerialNumber`), plus `invoiceNumber`.
+
+> **Stare:** validarea CUI și a blocului cumpărător (de mai sus) este implementată și testată.
+> Emiterea efectivă pe casă (comanda care trimite CUI-ul) se activează per model, după confirmarea
+> din documentația oficială de protocol Datecs RO / Tremol RO — vezi `Drivers/RoDatecs/Docs` și
+> `Drivers/RoTremol/Docs`. Pe un aparat fără suport, `/invoice` răspunde `E413`.
