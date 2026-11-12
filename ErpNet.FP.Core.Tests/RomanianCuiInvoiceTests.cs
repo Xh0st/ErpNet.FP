@@ -143,15 +143,14 @@ namespace ErpNet.FP.Core.Tests
         }
 
         [Fact]
-        public void RoTremol_ValidateInvoice_AcceptsValid_RejectsCnp()
+        public void RoTremol_Invoice_NotSupportedYet_IsE413()
         {
+            // Tremol ZFP RO invoice command is not confirmed from an official doc yet, so SupportsInvoice
+            // is false and /invoice returns E413. (The recipient rules themselves are covered above.)
             var printer = new FakeRoTremol(new ServiceOptions());
-            Assert.True(printer.ValidateInvoice(SampleInvoice(ValidRecipient())).Ok);
-
-            var cnp = ValidRecipient(); cnp.IdentifierType = IdentifierType.NationalId;
-            var status = printer.ValidateInvoice(SampleInvoice(cnp));
+            var status = printer.ValidateInvoice(SampleInvoice(ValidRecipient()));
             Assert.False(status.Ok);
-            Assert.Contains(status.Messages, m => m.Code == "E412");
+            Assert.Contains(status.Messages, m => m.Code == "E413");
         }
     }
 }

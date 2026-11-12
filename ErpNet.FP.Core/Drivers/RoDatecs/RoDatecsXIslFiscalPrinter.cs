@@ -49,6 +49,8 @@ namespace ErpNet.FP.Core.Drivers.RoDatecs
         private decimal? expectedReceiptAmount;
         private UsnJournal? usnJournal;
         private bool closeAttempted;
+        // When set, the next OpenReceipt opens a fiscal invoice (factură) carrying this buyer CIF.
+        private string? invoiceCif;
 
         public RoDatecsXIslFiscalPrinter(
             IChannel channel,
@@ -142,6 +144,10 @@ namespace ErpNet.FP.Core.Drivers.RoDatecs
         /// </summary>
         public override DeviceStatus ValidateInvoice(Invoice invoice)
         {
+            if (!Info.SupportsInvoice)
+            {
+                return NotImplemented("Invoice");
+            }
             var status = ValidateReceipt(invoice);
             if (!status.Ok)
             {
@@ -149,6 +155,44 @@ namespace ErpNet.FP.Core.Drivers.RoDatecs
             }
             RomanianInvoice.ValidateRecipient(status, invoice, Info.InvoiceNumberAssignment);
             return status;
+        }
+
+        /// <summary>
+        /// Prints a Romanian fiscal invoice (bon fiscal cu CUI cumpărător). Same flow as a receipt
+        /// (items, unit, payments, total check, USN journal, E409), but the receipt is opened as an
+        /// invoice carrying the buyer CIF (command 48, field 4 = 'I', field 5 = CIF). The invoice
+        /// number is assigned by the device and equals the fiscal receipt number.
+        /// </summary>
+        public override (ReceiptInfo, DeviceStatus) PrintInvoice(Invoice invoice)
+        {
+            var validation = ValidateInvoice(invoice);
+            if (!validation.Ok)
+            {
+                return (new InvoiceInfo(), validation);
+            }
+
+            // VAT payers print the "RO<cui>" form (vatNumber); others the bare CUI (identifier).
+            var recipient = invoice.Recipient!;
+            invoiceCif = string.IsNullOrWhiteSpace(recipient.VatNumber)
+                ? RomanianInvoice.CuiDigits(recipient.Identifier)
+                : recipient.VatNumber!.Trim();
+            try
+            {
+                var (receiptInfo, status) = PrintReceipt(invoice);
+                var invoiceInfo = new InvoiceInfo
+                {
+                    ReceiptNumber = receiptInfo.ReceiptNumber,
+                    ReceiptDateTime = receiptInfo.ReceiptDateTime,
+                    ReceiptAmount = receiptInfo.ReceiptAmount,
+                    FiscalMemorySerialNumber = receiptInfo.FiscalMemorySerialNumber,
+                    InvoiceNumber = receiptInfo.ReceiptNumber,
+                };
+                return (invoiceInfo, status);
+            }
+            finally
+            {
+                invoiceCif = null;
+            }
         }
 
         // ---------------------------------------------------------------------------------
@@ -284,8 +328,14 @@ namespace ErpNet.FP.Core.Drivers.RoDatecs
             string operatorId,
             string operatorPassword)
         {
-            // {OpCode}<SEP>{OpPwd}<SEP>{TillNmb}<SEP>{Invoice}<SEP>{...}<SEP>
-            // The unique sale number is the client's id only, it is not sent to a Romanian device.
+            // Command 48: {OpCode}<TAB>{OpPwd}<TAB>{TillNmb}<TAB>{Invoice}<TAB>{CIF}<TAB>
+            // Datecs RO certification scripts (DUDE "For_Developers", BIN/Scripturi teste avizare):
+            //   normal receipt:  "48,1\t0001\t1\t\t\t"                 ("COM.48_49 Bon nefiscal", index.html)
+            //   fiscal invoice:  "48,1\t0001\t1\tI\tRO123456789\t"     ("Script VanzareC complexa",
+            //                                                            "Script vanzare forme de plata",
+            //                                                            "Script Vanzare cu Subtotal")
+            // So the buyer CIF is carried in the open command itself (field 4 = 'I', field 5 = CIF),
+            // not by a separate command. The unique sale number is the client's id only; it is not sent.
             var header = string.Join("\t",
                 string.IsNullOrEmpty(operatorId)
                     ? Options.ValueOrDefault("Operator.ID", "1")
@@ -294,8 +344,8 @@ namespace ErpNet.FP.Core.Drivers.RoDatecs
                     ? Options.ValueOrDefault("Operator.Password", "0001").WithMaxLength(Info.OperatorPasswordMaxLength)
                     : operatorPassword,
                 "1",
-                "",
-                "",
+                string.IsNullOrEmpty(invoiceCif) ? "" : "I",
+                invoiceCif ?? "",
                 "");
             return Request(CommandOpenFiscalReceipt, header);
         }

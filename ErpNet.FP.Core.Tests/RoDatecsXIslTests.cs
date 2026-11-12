@@ -39,6 +39,8 @@ namespace ErpNet.FP.Core.Tests
                 ItemTextMaxLength = 72,
                 CommentTextMaxLength = 40,
                 OperatorPasswordMaxLength = 8,
+                SupportsInvoice = true,
+                InvoiceNumberAssignment = NumberAssignment.DeviceAssigned,
             };
             Info.SupportedPaymentTypes = GetSupportedPaymentTypes();
             Responder = DefaultResponder;
@@ -106,6 +108,30 @@ namespace ErpNet.FP.Core.Tests
             Payments = payments,
         };
 
+        private static Recipient VatRecipient() => new Recipient
+        {
+            Name = "TRANSPORT LOGISTIC SRL",
+            Identifier = "14399840",
+            IdentifierType = IdentifierType.TaxNumber,
+            VatNumber = "RO14399840",
+            Address = "Splaiul Unirii 165, Bucuresti",
+            City = "Bucuresti",
+        };
+
+        private static Invoice SampleInvoice(Recipient recipient, string usn = "", string number = "") => new Invoice
+        {
+            UniqueSaleNumber = usn,
+            Items = new List<Item>
+            {
+                new Item { Text = "Manopera", TaxGroup = TaxGroup.TaxGroup1, UnitPrice = 750.25m, Quantity = 1m, Unit = "buc" },
+                new Item { Type = ItemType.Comment, Text = "Comanda lucru: CL-2026-000123" },
+                new Item { Text = "Kit distributie", TaxGroup = TaxGroup.TaxGroup1, UnitPrice = 628.69m, Quantity = 1m, Unit = "buc" },
+            },
+            Payments = new List<Payment> { new Payment { Amount = 1378.94m, PaymentType = PaymentType.Card } },
+            Recipient = recipient,
+            Number = number,
+        };
+
         [Fact]
         public void OpenReceipt_UsesRomanianHeader_WithoutUniqueSaleNumber()
         {
@@ -114,6 +140,67 @@ namespace ErpNet.FP.Core.Tests
 
             Assert.True(status.Ok, string.Join("; ", status.Messages.Select(m => m.Text)));
             Assert.Equal(new[] { "1\t0001\t1\t\t\t" }, printer.DataOf(0x30));
+        }
+
+        [Fact]
+        public void Invoice_OpensWithInvoiceFlagAndCif_VatPayer()
+        {
+            var printer = new FakeRoPrinter(Options());
+            var (info, status) = printer.PrintInvoice(SampleInvoice(VatRecipient(), usn: "pa-000001"));
+
+            Assert.True(status.Ok, string.Join("; ", status.Messages.Select(m => m.Text)));
+            // Command 48: operator, password, till, 'I', CIF (RO form for a VAT payer), trailing field.
+            Assert.Equal(new[] { "1\t0001\t1\tI\tRO14399840\t" }, printer.DataOf(0x30));
+            // Same sale/payment flow as a receipt.
+            Assert.Equal(2, printer.DataOf(0x31).Count);
+            Assert.Equal("15", info.ReceiptNumber);
+            Assert.Equal("15", Assert.IsType<InvoiceInfo>(info).InvoiceNumber);
+        }
+
+        [Fact]
+        public void Invoice_NonVatPayer_SendsBareCui()
+        {
+            var r = VatRecipient();
+            r.VatNumber = "";   // non-VAT-payer legal entity: bare CUI, no RO
+            var printer = new FakeRoPrinter(Options());
+            printer.PrintInvoice(SampleInvoice(r, usn: "pa-000002"));
+
+            Assert.Equal(new[] { "1\t0001\t1\tI\t14399840\t" }, printer.DataOf(0x30));
+        }
+
+        [Fact]
+        public void Invoice_SameUsn_IsNotPrintedTwice()
+        {
+            var options = Options();
+            var first = new FakeRoPrinter(options);
+            var (info1, s1) = first.PrintInvoice(SampleInvoice(VatRecipient(), usn: "pa-000003"));
+            Assert.True(s1.Ok);
+
+            var second = new FakeRoPrinter(options);
+            var (info2, s2) = second.PrintInvoice(SampleInvoice(VatRecipient(), usn: "pa-000003"));
+            Assert.True(s2.Ok);
+            Assert.Empty(second.DataOf(0x30));           // nothing re-sent to the device
+            Assert.Equal(info1.ReceiptNumber, info2.ReceiptNumber);
+            Assert.Equal("15", Assert.IsType<InvoiceInfo>(info2).InvoiceNumber);
+        }
+
+        [Fact]
+        public void Invoice_OnModelWithoutSupport_IsE413()
+        {
+            var printer = new FakeRoPrinter(Options());
+            printer.Info.SupportsInvoice = false;
+            var (_, status) = printer.PrintInvoice(SampleInvoice(VatRecipient(), usn: "pa-000004"));
+            Assert.False(status.Ok);
+            Assert.Contains(status.Messages, m => m.Code == "E413");
+            Assert.Empty(printer.DataOf(0x30));
+        }
+
+        [Fact]
+        public void Invoice_SupportsInvoice_IsReportedInDeviceInfo()
+        {
+            var printer = new FakeRoPrinter(Options());
+            Assert.True(printer.Info.SupportsInvoice);
+            Assert.Equal(NumberAssignment.DeviceAssigned, printer.Info.InvoiceNumberAssignment);
         }
 
         [Fact]

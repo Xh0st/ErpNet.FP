@@ -564,6 +564,14 @@ namespace ErpNet.FP.Core.Drivers.RoTremol
         /// </summary>
         public override DeviceStatus ValidateInvoice(Invoice invoice)
         {
+            // SupportsInvoice stays false until the Tremol ZFP RO invoice command is confirmed from the
+            // official Tremol RO protocol (not available in the Datecs "For_Developers" kit). Until then
+            // /invoice returns E413 on Tremol RO; the recipient rules below are already in place for when
+            // the command is added.
+            if (!Info.SupportsInvoice)
+            {
+                return NotImplemented("Invoice");
+            }
             var status = ValidateReceipt(invoice);
             if (!status.Ok)
             {

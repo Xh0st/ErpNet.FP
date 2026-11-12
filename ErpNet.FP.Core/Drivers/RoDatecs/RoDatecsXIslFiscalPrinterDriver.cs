@@ -43,6 +43,12 @@ namespace ErpNet.FP.Core.Drivers.RoDatecs
                 fiscalPrinter.Info.SupportedPaymentTypes = fiscalPrinter.GetSupportedPaymentTypes();
                 fiscalPrinter.Info.SupportsSubTotalAmountModifiers = true;
                 fiscalPrinter.Info.SupportsPeriodReport = true;
+                // Fiscal invoice with buyer CIF (command 48, field 'I' + CIF) is a general feature of
+                // the Datecs RO protocol across the X/MX family this driver detects (DP-25X/MX,
+                // DP-150MX, WP-50/500MX, FP-700MX, FMP-350MX). Source: Datecs RO "For_Developers"
+                // certification scripts (Scripturi teste avizare / Script VanzareC complexa).
+                fiscalPrinter.Info.SupportsInvoice = true;
+                fiscalPrinter.Info.InvoiceNumberAssignment = NumberAssignment.DeviceAssigned;
                 serviceOptions.ReconfigurePrinterConstants(fiscalPrinter.Info);
                 serviceOptions.ReconfigurePrinterOptions(fiscalPrinter.Info);
                 return fiscalPrinter;

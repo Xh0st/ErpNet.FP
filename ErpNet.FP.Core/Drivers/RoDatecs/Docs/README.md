@@ -1,21 +1,45 @@
-# Documentație protocol Datecs RO (necesară pentru bonul cu CUI cumpărător)
+# Documentație protocol Datecs RO — bon fiscal cu CUI cumpărător
 
-Pentru implementarea bonului fiscal cu CUI cumpărător (factură simplificată) pe Datecs RO,
-trebuie puse aici PDF-urile oficiale de protocol și citate comanda + pagina în cod:
+Sursa oficială folosită: **Datecs „DUDE” — For_Developers**, instalat cu aplicația Datecs
+(`C:\Program Files (x86)\Datecs Applications\DUDE\For_Developers`), folderul
+**`BIN\Scripturi teste avizare`** (scripturile oficiale de avizare Datecs pentru România).
+Scripturile relevante sunt copiate în `avizare-datecs-ro/`.
 
-- **Datecs programmer's manual, varianta RO**, pentru FP-700X / DP-25X / WP-500X (și FMP-350X).
-  Din el trebuie confirmate, pentru firmware-ul românesc:
-  - comanda **48 (0x30) „Open fiscal receipt”** — flagul `Invoice` = `'I'` pentru bon tip factură,
-    și ordinea câmpurilor pentru varianta RO;
-  - comanda **57 (0x39) „Enter and print invoice data”** — câmpurile
-    `{Seller}{Receiver}{Buyer}{Address1}{Address2}{TypeTAXN}{TAXN}{VATN}`:
-    - **codul `TypeTAXN` pentru CUI românesc** (în varianta bulgară: 0 = BULSTAT, 1 = EGN, 2 = LNCH,
-      3 = service — pentru RO trebuie codul corect pentru CUI persoană juridică, NU se ghicește);
-    - **lungimea maximă a `TAXN`** pe firmware RO (bulgară: 8–13 cifre; CUI RO are 2–10 cifre);
-    - ordinea comenzii 57 față de vânzări (49) și plăți (53);
-    - ce tipărește casa (rândurile cu CUI / denumire cumpărător).
+## Bonul cu CUI se deschide prin comanda 48 (nu printr-o comandă separată)
 
-Manualul englez pan-model pentru aceleași aparate există deja în `../../BgDatecs/Docs/`
-(`PM_FMP350X_FMP55X_FP700X-BUL_ FPprotocol_eng.pdf`, `bg.isl.dt.x.protocol-v2.02-en.pdf`),
-dar acolo `TypeTAXN`/`TAXN` sunt pentru Bulgaria. Varianta RO trebuie confirmată înainte de a trimite
-CUI-ul la casă, pentru că un cod sau o lungime greșită scrie un identificator fiscal greșit în bon.
+Comanda **48 „Deschidere bon fiscal”** are formatul (câmpuri separate prin TAB):
+
+```
+{OpCode}<TAB>{OpPwd}<TAB>{TillNmb}<TAB>{Invoice}<TAB>{CIF}<TAB>
+```
+
+* **Bon normal:** `48,1\t0001\t1\t\t\t` — câmpurile `Invoice` și `CIF` goale.
+* **Bon fiscal cu factură (CUI cumpărător):** `48,1\t0001\t1\tI\tRO123456789\t`
+  — câmpul 4 = `I` (marchează bonul ca factură) și câmpul 5 = **CIF-ul cumpărătorului**.
+
+Confirmat în scripturile de avizare (toate deschid bonul cu `I` + CIF):
+- `avizare-datecs-ro/VanzareC-complexa-platitor-TVA.txt`
+- `avizare-datecs-ro/VanzareC-complexa-neplatitor-TVA.txt`
+- `avizare-datecs-ro/Vanzare-cu-Subtotal.txt`
+- `avizare-datecs-ro/Vanzare-forme-de-plata.txt`
+
+Formatul folosit de driverul propriu pe fișiere al Sincrona — `48,1\t0001\t1\tI\t<CUI>\t` —
+**este corect** (identic cu scripturile de avizare).
+
+## CIF-ul trimis
+
+În scripturi CIF-ul apare ca `RO123456789` (plătitor de TVA). Driverul trimite:
+* **plătitor de TVA:** `vatNumber` (forma `RO<cui>`);
+* **neplătitor de TVA:** `identifier` (CUI simplu, fără `RO`).
+
+## Restul fluxului e identic cu bonul normal
+
+Vânzările (49), subtotalul (51), plata (53) și închiderea (56) sunt exact aceleași ca la `/receipt`
+(vezi scripturile). De aceea `PrintInvoice` refolosește întreg fluxul `PrintReceipt`, schimbând doar
+deschiderea bonului. Nicio comandă nu a fost ghicită.
+
+## Modele
+
+Kit-ul For_Developers acoperă familia Datecs RO X/MX (DP-25X/MX, DP-150MX, WP-50/500MX, FP-700MX,
+FMP-350MX) — aceleași pe care le detectează driverul `ro.dt.x.isl`. De aceea `SupportsInvoice = true`
+e setat pentru driver, cu `invoiceNumberAssignment = device-assigned`.
