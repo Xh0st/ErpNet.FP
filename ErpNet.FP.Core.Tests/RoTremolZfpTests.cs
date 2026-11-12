@@ -26,6 +26,8 @@ namespace ErpNet.FP.Core.Tests
         {
             Info = new RoTremolZfpFiscalPrinterDriver().ParseDeviceInfo(Serial, "Ver 1.00,TRM25-RO", "", true);
             Info.SupportedPaymentTypes = GetSupportedPaymentTypes();
+            Info.SupportsInvoice = true;
+            Info.InvoiceNumberAssignment = NumberAssignment.DeviceAssigned;
             Responder = Default;
         }
 
@@ -110,6 +112,77 @@ namespace ErpNet.FP.Core.Tests
             },
             Payments = payments,
         };
+
+        private static Recipient VatRecipient() => new Recipient
+        {
+            Name = "TRANSPORT LOGISTIC SRL",
+            Identifier = "14399840",
+            IdentifierType = IdentifierType.TaxNumber,
+            VatNumber = "RO14399840",
+            Address = "Splaiul Unirii 165, Bucuresti",
+            City = "Bucuresti",
+        };
+
+        private static Invoice SampleInvoice(Recipient recipient, string usn = "") => new Invoice
+        {
+            UniqueSaleNumber = usn,
+            Items = new List<Item>
+            {
+                new Item { Text = "Manopera", TaxGroup = TaxGroup.TaxGroup1, UnitPrice = 0.30m, Quantity = 1m, Unit = "buc" },
+                new Item { Type = ItemType.Comment, Text = "Comanda CL-123" },
+            },
+            Payments = new List<Payment> { new Payment { Amount = 0.30m, PaymentType = PaymentType.Cash } },
+            Recipient = recipient,
+        };
+
+        [Fact]
+        public void Invoice_OpensSpecialCustomerDocument_WithCif_VatPayer()
+        {
+            var p = new FakeRoTremol(Options());
+            var (info, status) = p.PrintInvoice(SampleInvoice(VatRecipient(), usn: "pa-1"));
+
+            Assert.True(status.Ok, string.Join("; ", status.Messages.Select(m => m.Code + " " + m.Text)));
+            // Command 30h special customer document (protocol 2.6.4):
+            // OperNum;OperPass;0;0;3;CIF;Name;;;;;Address
+            Assert.Equal(
+                new[] { "1;0   ;0;0;3;RO14399840;TRANSPORT LOGISTIC SRL;;;;;Splaiul Unirii 165, Bucuresti" },
+                p.DataOf(0x30));
+            Assert.Equal("0042", info.ReceiptNumber);
+            Assert.Equal("0042", Assert.IsType<InvoiceInfo>(info).InvoiceNumber);
+        }
+
+        [Fact]
+        public void Invoice_NonVatPayer_SendsBareCui()
+        {
+            var r = VatRecipient();
+            r.VatNumber = "";
+            var p = new FakeRoTremol(Options());
+            p.PrintInvoice(SampleInvoice(r, usn: "pa-2"));
+
+            Assert.StartsWith("1;0   ;0;0;3;14399840;TRANSPORT LOGISTIC SRL;", p.DataOf(0x30)[0]);
+        }
+
+        [Fact]
+        public void Invoice_SameUsn_IsNotPrintedTwice()
+        {
+            var options = Options();
+            var first = new FakeRoTremol(options);
+            Assert.True(first.PrintInvoice(SampleInvoice(VatRecipient(), usn: "pa-3")).Item2.Ok);
+
+            var second = new FakeRoTremol(options);
+            var (info, status) = second.PrintInvoice(SampleInvoice(VatRecipient(), usn: "pa-3"));
+            Assert.True(status.Ok);
+            Assert.Empty(second.DataOf(0x30));
+            Assert.Equal("0042", Assert.IsType<InvoiceInfo>(info).InvoiceNumber);
+        }
+
+        [Fact]
+        public void Invoice_SupportsInvoice_IsReported()
+        {
+            var p = new FakeRoTremol(Options());
+            Assert.True(p.Info.SupportsInvoice);
+            Assert.Equal(NumberAssignment.DeviceAssigned, p.Info.InvoiceNumberAssignment);
+        }
 
         [Fact]
         public void RealDeviceFrames_FromTheLog_AreParsed()

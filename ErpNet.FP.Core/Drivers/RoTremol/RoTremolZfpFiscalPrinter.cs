@@ -47,6 +47,8 @@ namespace ErpNet.FP.Core.Drivers.RoTremol
         private UsnJournal? usnJournal;
         private bool closeAttempted;
         private readonly Queue<string> pendingItemUnits = new Queue<string>();
+        // When set, the next OpenReceipt opens a "special customer document" (invoice) with this buyer.
+        private Recipient? invoiceRecipient;
 
         public RoTremolZfpFiscalPrinter(
             IChannel channel,
@@ -392,13 +394,50 @@ namespace ErpNet.FP.Core.Drivers.RoTremol
 
         public override (string, DeviceStatus) OpenReceipt(string uniqueSaleNumber, string operatorId, string operatorPassword)
         {
-            // <OperNum[1..2]>;<OperPass[4]>;0;0;<FiscalReceiptPrintType[1]>  — '2' postponed printing
+            if (invoiceRecipient != null)
+            {
+                return OpenSpecialCustomerDocument(operatorId, operatorPassword, invoiceRecipient);
+            }
+            // Command 30h "Open fiscal receipt" (Tremol RO protocol 2.6.3, p.44):
+            // <OperNum[1..2]>;<OperPass[4]>;<'0'>;<'0'>;<FiscalReceiptPrintType[1]>  — '2' postponed
             return Request(CommandOpenReceipt, string.Join(";",
                 OperatorId(operatorId),
                 OperatorPassword(operatorId, operatorPassword),
                 "0",
                 "0",
                 "2"));
+        }
+
+        /// <summary>
+        /// Command 30h "Open fiscal special customer document" (Tremol RO protocol 2.6.4, p.46):
+        /// <code>
+        /// OperNum ; OperPass[4] ; '0' ; '0' ; CustomerReceiptPrintType ; CustomerVATNum[15] ;
+        /// InvRecipient[30] ; InvFree1[20] ; InvFree2[20] ; InvFree3[20] ; InvFree4[20] ; Address[30]
+        /// </code>
+        /// CustomerReceiptPrintType '3' = postponed printing. The buyer CIF goes in CustomerVATNum,
+        /// the buyer name in InvRecipient, the address in Address. The rest of the fiscal document
+        /// (sales, payments, close) is identical to a normal receipt.
+        /// </summary>
+        protected (string, DeviceStatus) OpenSpecialCustomerDocument(
+            string operatorId, string operatorPassword, Recipient recipient)
+        {
+            var cif = string.IsNullOrWhiteSpace(recipient.VatNumber)
+                ? RomanianInvoice.CuiDigits(recipient.Identifier)
+                : recipient.VatNumber!.Trim();
+
+            return Request(CommandOpenReceipt, string.Join(";",
+                OperatorId(operatorId),
+                OperatorPassword(operatorId, operatorPassword),
+                "0",
+                "0",
+                "3",
+                ToDeviceText(cif).WithMaxLength(15),
+                ToDeviceText(recipient.Name).WithMaxLength(30),
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                ToDeviceText(recipient.Address).WithMaxLength(30)));
         }
 
         public override (string, DeviceStatus) AddItem(
@@ -564,10 +603,6 @@ namespace ErpNet.FP.Core.Drivers.RoTremol
         /// </summary>
         public override DeviceStatus ValidateInvoice(Invoice invoice)
         {
-            // SupportsInvoice stays false until the Tremol ZFP RO invoice command is confirmed from the
-            // official Tremol RO protocol (not available in the Datecs "For_Developers" kit). Until then
-            // /invoice returns E413 on Tremol RO; the recipient rules below are already in place for when
-            // the command is added.
             if (!Info.SupportsInvoice)
             {
                 return NotImplemented("Invoice");
@@ -579,6 +614,40 @@ namespace ErpNet.FP.Core.Drivers.RoTremol
             }
             RomanianInvoice.ValidateRecipient(status, invoice, Info.InvoiceNumberAssignment);
             return status;
+        }
+
+        /// <summary>
+        /// Prints a Romanian fiscal invoice (bon fiscal cu CUI cumpărător) on Tremol RO. Same flow as a
+        /// receipt (items, unit, payments, total, USN journal, E409), but the document is opened as a
+        /// "special customer document" (command 30h) carrying the buyer CIF, name and address. The
+        /// invoice number is assigned by the device and equals the fiscal receipt number.
+        /// </summary>
+        public override (ReceiptInfo, DeviceStatus) PrintInvoice(Invoice invoice)
+        {
+            var validation = ValidateInvoice(invoice);
+            if (!validation.Ok)
+            {
+                return (new InvoiceInfo(), validation);
+            }
+
+            invoiceRecipient = invoice.Recipient;
+            try
+            {
+                var (receiptInfo, status) = PrintReceipt(invoice);
+                var invoiceInfo = new InvoiceInfo
+                {
+                    ReceiptNumber = receiptInfo.ReceiptNumber,
+                    ReceiptDateTime = receiptInfo.ReceiptDateTime,
+                    ReceiptAmount = receiptInfo.ReceiptAmount,
+                    FiscalMemorySerialNumber = receiptInfo.FiscalMemorySerialNumber,
+                    InvoiceNumber = receiptInfo.ReceiptNumber,
+                };
+                return (invoiceInfo, status);
+            }
+            finally
+            {
+                invoiceRecipient = null;
+            }
         }
 
         protected UsnJournal Journal => usnJournal ??= new UsnJournal(

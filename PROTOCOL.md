@@ -639,7 +639,11 @@ On the Romanian drivers (`ro.dt.x.isl`, `ro.zk.zfp`) this endpoint prints a **bo
 * The CUI is printed in the device's **fiscal buyer field**, not as free-text comment. A repeated `uniqueSaleNumber` is **not printed twice** (same idempotency and **E409** behaviour as `/receipt`).
 * **"supportsInvoice"** is reported per model/firmware; on a device that does not support the buyer-CUI field, the request returns **E413**.
 
-**Supported now:** Datecs RO (`ro.dt.x.isl`) — DP-25X/MX, DP-150MX, WP-50/500MX, FP-700MX, FMP-350MX. The buyer CIF is carried in the open-receipt command (command 48, field `I` + CIF), confirmed against Datecs's official RO certification scripts. **Pending:** Tremol RO (`ro.zk.zfp`) reports `supportsInvoice: false` and returns **E413** until the ZFP RO invoice command is confirmed from the official Tremol RO protocol.
+**Supported:**
+* **Datecs RO** (`ro.dt.x.isl`) — DP-25X/MX, DP-150MX, WP-50/500MX, FP-700MX, FMP-350MX. The buyer CIF is carried in the open-receipt command (command 48, field `I` + CIF), confirmed against Datecs's official RO certification scripts.
+* **Tremol RO** (`ro.zk.zfp`) — S25 RO and other `-RO` firmware. The buyer CIF is carried by the "open fiscal special customer document" command (ZFP 30h, protocol 2.6.4), confirmed against the official Tremol RO protocol.
+
+In both cases the rest of the document (sales, payments, close) is identical to a normal receipt, and the invoice number is the device-assigned fiscal receipt number.
 
 ## `POST` Print Credit Note
 Prints a native credit note - an extended fiscal reversal against an original invoice, carrying the same **recipient** (buyer) block as an invoice.

@@ -37,6 +37,10 @@ namespace ErpNet.FP.Core.Drivers.RoTremol
                 fiscalPrinter.Info.SupportedPaymentTypes = fiscalPrinter.GetSupportedPaymentTypes();
                 fiscalPrinter.Info.SupportsSubTotalAmountModifiers = true;
                 fiscalPrinter.Info.SupportsPeriodReport = true;
+                // Fiscal invoice with buyer CIF via the "special customer document" (command 30h),
+                // Tremol RO protocol 2.6.4 (p.46). Source: Tremol ZFP SDK RO (protocol_description_RO).
+                fiscalPrinter.Info.SupportsInvoice = true;
+                fiscalPrinter.Info.InvoiceNumberAssignment = NumberAssignment.DeviceAssigned;
                 serviceOptions.ReconfigurePrinterConstants(fiscalPrinter.Info);
                 serviceOptions.ReconfigurePrinterOptions(fiscalPrinter.Info);
                 return fiscalPrinter;

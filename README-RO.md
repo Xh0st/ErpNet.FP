@@ -185,12 +185,13 @@ Reguli (validate de bridge înainte de a trimite la casă):
 * Răspunsul e identic cu cel de la `/receipt` (`receiptNumber`, `receiptDateTime`, `receiptAmount`,
   `fiscalMemorySerialNumber`), plus `invoiceNumber`.
 
-> **Stare:**
-> - **Datecs RO (`ro.dt.x.isl`)** — implementat și testat. CIF-ul se trimite în comanda de deschidere
->   a bonului (comanda 48, câmp `I` + CIF), confirmat din scripturile oficiale de avizare Datecs RO
->   (vezi `Drivers/RoDatecs/Docs`). `supportsInvoice: true`, număr atribuit de casă.
-> - **Tremol RO (`ro.zk.zfp`)** — `supportsInvoice: false`, `/invoice` răspunde `E413` până la
->   confirmarea comenzii de factură din protocolul oficial Tremol ZFP RO (vezi `Drivers/RoTremol/Docs`).
+> **Stare:** implementat și testat pe ambele familii.
+> - **Datecs RO (`ro.dt.x.isl`)** — CIF-ul se trimite în comanda de deschidere a bonului
+>   (comanda 48, câmp `I` + CIF), confirmat din scripturile oficiale de avizare Datecs RO
+>   (vezi `Drivers/RoDatecs/Docs`).
+> - **Tremol RO (`ro.zk.zfp`)** — CIF-ul se trimite prin comanda „open fiscal special customer document”
+>   (ZFP 30h, protocol 2.6.4), confirmat din protocolul oficial Tremol RO (vezi `Drivers/RoTremol/Docs`).
 >
-> Validarea CUI și a blocului cumpărător se aplică la ambele. Modelul își expune suportul în
-> `GET /printers` și `GET /printers/{id}` prin câmpul `supportsInvoice` (citit de Sincrona).
+> La ambele: `supportsInvoice: true`, număr atribuit de casă. Validarea CUI și a blocului cumpărător
+> se aplică identic. Modelul își expune suportul în `GET /printers` și `GET /printers/{id}` prin câmpul
+> `supportsInvoice` (citit de Sincrona).
